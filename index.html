@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GHOST APP</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --bg: #0b141a; --card: #111b21; --green: #00a884; --my: #005c4b;
+            --other: #202c33; --text: #e9edef; --red: #ea0038; --blue: #34b7f1;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; margin: 0; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        
+        /* LOADING SCREEN */
+        #loading-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loader-logo { font-size: 50px; margin-bottom: 20px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .progress-container { width: 200px; height: 4px; background: #2a3942; border-radius: 10px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: var(--green); transition: width 0.1s; }
+
+        /* MAIN CONTAINER */
+        .container { background: var(--card); width: 100%; height: 100%; max-width: 450px; display: none; flex-direction: column; position: relative; }
+        @media (min-width: 450px) { .container { height: 90vh; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); } }
+
+        /* SCREENS */
+        .screen { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; width: 100%; }
+        input, select, button { width: 100%; margin: 10px 0; padding: 15px; border-radius: 12px; border: 1px solid #2a3942; background: #2a3942; color: white; font-size: 15px; outline: none; }
+        button { background: var(--green); border: none; color: #0b141a; font-weight: bold; cursor: pointer; }
+        .secondary-btn { background: transparent; color: var(--green); border: 1px solid var(--green); }
+
+        /* CHAT BOX */
+        #chat-box { display: none; flex-direction: column; height: 100%; }
+        #room-header { background: #202c33; padding: 15px; border-bottom: 1px solid #2a3942; position: relative; }
+        #display-room-name { font-size: 18px; font-weight: bold; display: block; }
+        #status-online { font-size: 11px; color: #25d366; display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+        .dot { width: 8px; height: 8px; background: #25d366; border-radius: 50%; display: inline-block; }
+
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; }
+        .msg { max-width: 80%; margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 15px; position: relative; }
+        .my-msg { align-self: flex-end; background: var(--my); border-top-right-radius: 0; }
+        .other-msg { align-self: flex-start; background: var(--other); border-top-left-radius: 0; }
+        .sender-info { font-size: 10px; font-weight: bold; color: var(--blue); margin-bottom: 2px; display: block; }
+        .timestamp { font-size: 9px; opacity: 0.6; float: right; margin-top: 5px; margin-left: 8px; }
+
+        .input-area { background: #202c33; padding: 10px; display: flex; gap: 10px; }
+        .input-area input { margin: 0; border-radius: 25px; flex: 1; }
+        .input-area button { width: 50px; height: 50px; border-radius: 50%; margin: 0; }
+
+        /* EXIT MODAL */
+        #exit-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; text-align: center; border: 1px solid var(--red); width: 100%; max-width: 320px; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div class="loader-logo">👻</div>
+        <div style="font-size: 20px; font-weight: bold; color: var(--green);">GHOST APP</div>
+        <div style="font-size: 11px; margin: 10px 0; color: #8696a0; text-align:center;">End-to-End Encrypted<br>Zero History Messaging</div>
+        <div class="progress-container"><div id="progress-bar"></div></div>
+        <div id="loading-text" style="margin-top:5px; font-size:12px;">0%</div>
+    </div>
+
+    <div id="main-container" class="container">
+        <div id="auth-screen" class="screen">
+            <h1 style="color:var(--green); text-align:center;">👻 GHOST</h1>
+            <input type="email" id="auth-email" placeholder="Email">
+            <input type="password" id="auth-pass" placeholder="Password Akun">
+            <input type="text" id="auth-username" placeholder="Display Name">
+            <select id="auth-country">
+                <option value="🇮🇩 ID">Indonesia 🇮🇩</option>
+                <option value="🇲🇾 MY">Malaysia 🇲🇾</option>
+            </select>
+            <button id="btnLogin">LOGIN</button>
+            <button id="btnRegister" class="secondary-btn">DAFTAR BARU</button>
+        </div>
+
+        <div id="room-selection" class="screen" style="display:none;">
+            <h2 style="color:var(--green); text-align:center;">Setup Room</h2>
+            <div style="display:flex; gap:10px;">
+                <select id="room-letter" style="flex:1;"></select>
+                <input type="text" id="room-id" placeholder="ID Room" style="flex:2; margin:0;">
+            </div>
+            <input type="password" id="room-key" placeholder="Room Key (AES)">
+            <button id="btnJoin">BUKA / GABUNG</button>
+            <button id="btnLogout" class="secondary-btn" style="border:none;">Log Out</button>
+        </div>
+
+        <div id="chat-box">
+            <div id="room-header">
+                <span id="display-room-name"></span>
+                <div id="status-online"><span class="dot"></span> <span id="member-names">Connecting...</span></div>
+            </div>
+            <div id="messages"></div>
+            <div class="input-area">
+                <input type="text" id="msg-input" placeholder="Ketik pesan...">
+                <button id="btnSend">➤</button>
+            </div>
+            <button id="btnExitTrigger" style="background:var(--red); color:white; border-radius:0; margin:0;">EXIT & DELETE</button>
+        </div>
+    </div>
+
+    <div id="exit-modal">
+        <div class="modal-content">
+            <h3 id="modal-title">KELUAR?</h3>
+            <p style="font-size:12px; color:#8696a0; margin-bottom:20px;">Data dalam room ini akan dihapus permanen.</p>
+            <button onclick="confirmExit(true)" style="background:var(--red); color:white;">YA, KELUAR</button>
+            <button onclick="confirmExit(false)" class="secondary-btn" style="margin-top:10px;">BATAL</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+        import { getDatabase, ref, set, push, onValue, remove, get, onDisconnect, off } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzwz_3to3Oq9dNnNtVMp0wqbUmaguVnBA",
+            authDomain: "ghost-app-c0917.firebaseapp.com",
+            databaseURL: "https://ghost-app-c0917-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ghost-app-c0917",
+            storageBucket: "ghost-app-c0917.firebasestorage.app",
+            messagingSenderId: "953783806880",
+            appId: "1:953783806880:web:3748c997e4c01ab8dc92c5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        let myName, myCountry, currentPath, isHost = false;
+
+        // LOADING LOGIC
+        let prog = 0;
+        const iLoad = setInterval(() => {
+            prog += Math.floor(Math.random() * 20) + 5;
+            if(prog >= 100) {
+                prog = 100; clearInterval(iLoad);
+                setTimeout(() => { document.getElementById('loading-screen').style.display='none'; document.getElementById('main-container').style.display='flex'; }, 500);
+            }
+            document.getElementById('progress-bar').style.width = prog + "%";
+            document.getElementById('loading-text').innerText = prog + "%";
+        }, 100);
+
+        // ROOM LETTERS
+        const rL = document.getElementById('room-letter');
+        for(let i=65; i<=90; i++) rL.innerHTML += `<option value="${String.fromCharCode(i)}">${String.fromCharCode(i)}</option>`;
+
+        // AUTH ACTIONS
+        document.getElementById('btnLogin').onclick = async () => {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-pass').value;
+            myName = document.getElementById('auth-username').value;
+            myCountry = document.getElementById('auth-country').value;
+            if(!e || !p || !myName) return alert("Lengkapi data!");
+            try {
+                await signInWithEmailAndPassword(auth, e, p);
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('room-selection').style.display = 'flex';
+            } catch(err) { alert(err.message); }
+        };
+
+        // FIX LOG OUT: Membersihkan sesi dan kembali ke Login
+        document.getElementById('btnLogout').onclick = async () => {
+            try {
+                await signOut(auth);
+                location.reload(); // Cara paling aman membersihkan semua state
+            } catch(err) { alert(err.message); }
+        };
+
+        // JOIN ROOM
+        document.getElementById('btnJoin').onclick = async () => {
+            const l = document.getElementById('room-letter').value;
+            const id = document.getElementById('room-id').value;
+            const key = document.getElementById('room-key').value;
+            if(!id || !key) return alert("ID & Key wajib!");
+
+            currentPath = `rooms/${l}_${id}_${key}`;
+            const snap = await get(ref(db, currentPath + "/users"));
+            
+            if(!snap.exists()) {
+                isHost = true;
+                await set(ref(db, currentPath + "/users/" + myName), { role: "host" });
+            } else {
+                if(Object.keys(snap.val()).length >= 2 && !snap.val()[myName]) return alert("Penuh!");
+                isHost = snap.val()[myName]?.role === "host";
+                await set(ref(db, currentPath + "/users/" + myName), { role: isHost ? "host" : "guest" });
+            }
+
+            onDisconnect(ref(db, currentPath + "/users/" + myName)).remove();
+            document.getElementById('room-selection').style.display = 'none';
+            document.getElementById('chat-box').style.display = 'flex';
+            document.getElementById('display-room-name').innerText = "Room " + l + "-" + id;
+
+            // STATUS ONLINE: Menampilkan siapa yang aktif
+            onValue(ref(db, currentPath + "/users"), (s) => {
+                if(s.exists()) {
+                    const users = Object.keys(s.val());
+                    document.getElementById('member-names').innerText = users.join(" & ") + " Online";
+                }
+            });
+
+            onValue(ref(db, currentPath + "/messages"), (s) => {
+                const box = document.getElementById('messages');
+                box.innerHTML = "";
+                s.forEach((c) => {
+                    const d = c.val();
+                    let dec = "";
+                    try { dec = CryptoJS.AES.decrypt(d.text, key).toString(CryptoJS.enc.Utf8); } catch(e){}
+                    const isMe = d.sender === myName;
+                    box.innerHTML += `<div class="msg ${isMe ? 'my-msg' : 'other-msg'}"><span class="sender-info">${d.sender}</span>${dec || "Locked"}<span class="timestamp">${d.time}</span></div>`;
+                });
+                box.scrollTop = box.scrollHeight;
+            });
+        };
+
+        const send = () => {
+            const inp = document.getElementById('msg-input');
+            const key = document.getElementById('room-key').value;
+            if(!inp.value.trim()) return;
+            const enc = CryptoJS.AES.encrypt(inp.value, key).toString();
+            const now = new Date();
+            const time = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+            push(ref(db, currentPath + "/messages"), { sender: myName, text: enc, time: time });
+            inp.value = "";
+        };
+
+        document.getElementById('btnSend').onclick = send;
+        document.getElementById('msg-input').onkeydown = (e) => { if(e.key === "Enter") send(); };
+
+        document.getElementById('btnExitTrigger').onclick = () => { document.getElementById('exit-modal').style.display = "flex"; };
+        window.confirmExit = async (yes) => {
+            document.getElementById('exit-modal').style.display = "none";
+            if(yes) {
+                off(ref(db, currentPath + "/messages"));
+                off(ref(db, currentPath + "/users"));
+                if(isHost) await remove(ref(db, currentPath));
+                else await remove(ref(db, currentPath + "/users/" + myName));
+                document.getElementById('chat-box').style.display = 'none';
+                document.getElementById('room-selection').style.display = 'flex';
+            }
+        };
+    </script>
+</body>
+</html>
