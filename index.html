@@ -1,351 +1,765 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GHOST APP</title>
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/fizkers/GHOST-APP/main/logo-Ghost-app.png">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <style>
-        :root {
-            --bg: #0b141a; --card: #111b21; --green: #00a884; --my: #005c4b;
-            --other: #202c33; --text: #e9edef; --red: #ea0038; --blue: #34b7f1;
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; margin: 0; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        
-        #ghost-toast {
-            position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
-            background: var(--green); color: #0b141a; padding: 12px 25px;
-            border-radius: 30px; font-weight: bold; font-size: 14px; z-index: 10001;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        #ghost-toast.show { top: 20px; }
-        #ghost-toast.error { background: var(--red); color: white; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GHOST APP</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/fizkers/GHOST-APP/main/logo-Ghost-app.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
-        /* LOADING SCREEN */
-        #loading-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .loader-logo { width: 80px; height: 80px; margin-bottom: 20px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1); } }
-        .progress-container { width: 200px; height: 4px; background: #2a3942; border-radius: 10px; overflow: hidden; }
-        #progress-bar { width: 0%; height: 100%; background: var(--green); transition: width 0.1s; }
+:root {
+  --bg: #070d10;
+  --surface: #0d1a20;
+  --card: #111e25;
+  --elevated: #182830;
+  --border: #1e3040;
+  --green: #00e096;
+  --green-dim: #00a87240;
+  --green-glow: #00e09620;
+  --my: #003d2e;
+  --my-border: #005c45;
+  --other: #131f26;
+  --other-border: #1e3040;
+  --text: #e8f1f5;
+  --muted: #5a7a8a;
+  --red: #ff3060;
+  --blue: #38c0e8;
+  --yellow: #ffd166;
+  --font: 'Space Grotesk', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
 
-        /* MAIN CONTAINER */
-        .container { background: var(--card); width: 100%; height: 100%; max-width: 450px; display: none; flex-direction: column; position: relative; }
-        @media (min-width: 450px) { .container { height: 90vh; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); } }
+*, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 
-        /* SCREENS */
-        .screen { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; width: 100%; }
-        .input-group { position: relative; width: 100%; }
-        input, select, button { width: 100%; margin: 10px 0; padding: 15px; border-radius: 12px; border: 1px solid #2a3942; background: #2a3942; color: white; font-size: 15px; outline: none; }
-        .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #8696a0; font-size: 18px; z-index: 10; }
+html, body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
 
-        button { background: var(--green); border: none; color: #0b141a; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:active { opacity: 0.7; }
-        .secondary-btn { background: transparent; color: var(--green); border: 1px solid var(--green); }
+/* ───── TOAST ───── */
+#toast {
+  position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
+  padding: 10px 22px; border-radius: 30px;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.03em;
+  z-index: 99999; transition: top 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap; pointer-events: none;
+}
+#toast.ok  { background: var(--green); color: #000; top: env(safe-area-inset-top, 0px); margin-top: 16px; }
+#toast.err { background: var(--red);   color: #fff; top: env(safe-area-inset-top, 0px); margin-top: 16px; }
 
-        /* CHAT BOX - REVISED LAYOUT */
-        #chat-box { display: none; flex-direction: column; height: 100%; position: relative; }
-        
-        #room-header { 
-            background: #202c33; 
-            padding: 10px 15px; 
-            border-bottom: 1px solid #2a3942; 
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 10;
-        }
-        .header-info { display: flex; flex-direction: column; }
-        #display-room-name { font-size: 16px; font-weight: bold; color: var(--text); }
-        #status-online { font-size: 11px; color: #25d366; display: flex; align-items: center; gap: 5px; }
-        .dot { width: 7px; height: 7px; background: #25d366; border-radius: 50%; }
+/* ───── LOADING ───── */
+#loading {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 16px; z-index: 9999;
+}
+#loading img { width: 72px; height: 72px; }
+.load-title { font-family: var(--mono); font-size: 22px; color: var(--green); letter-spacing: 0.08em; }
+.load-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; text-align: center; line-height: 1.8; }
+.progress-wrap { width: 180px; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
+#progress-bar { height: 100%; width: 0%; background: var(--green); border-radius: 3px; transition: width 0.12s linear; }
+.load-pct { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 
-        #btnExitTrigger {
-            background: rgba(234, 0, 56, 0.2);
-            color: #ff4d6d;
-            border: 1px solid var(--red);
-            padding: 5px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            width: auto;
-            margin: 0;
-        }
+/* ───── LAYOUT ───── */
+#app {
+  width: 100vw; height: 100%;
+  display: none; justify-content: center; align-items: center;
+  background: var(--bg);
+}
 
-        /* MESSAGES AREA */
-        #messages { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); 
-            background-size: cover;
-            background-blend-mode: overlay;
-            background-color: rgba(11, 20, 26, 0.9);
-        }
-        .msg { max-width: 80%; margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 15px; position: relative; line-height: 1.4; }
-        .my-msg { align-self: flex-end; background: var(--my); border-top-right-radius: 0; }
-        .other-msg { align-self: flex-start; background: var(--other); border-top-left-radius: 0; }
-        .sender-info { font-size: 10px; font-weight: bold; color: var(--blue); margin-bottom: 2px; display: block; }
-        .timestamp { font-size: 9px; opacity: 0.6; float: right; margin-top: 5px; margin-left: 8px; }
+.window {
+  background: var(--surface);
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
 
-        /* INPUT AREA - FIXED AT BOTTOM */
-        .input-area { 
-            background: #202c33; 
-            padding: 10px; 
-            display: flex; 
-            align-items: center;
-            gap: 10px; 
-            border-top: 1px solid #2a3942;
-        }
-        .input-area input { 
-            margin: 0; 
-            border-radius: 25px; 
-            flex: 1; 
-            padding: 12px 18px; 
-            background: #2a3942; 
-            border: none;
-            color: white;
-        }
-        .input-area button { 
-            width: 45px; 
-            height: 45px; 
-            border-radius: 50%; 
-            margin: 0; 
-            padding: 0;
-            flex-shrink: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: var(--green);
-        }
+@media (min-width: 520px) {
+  .window {
+    width: 420px; height: 92vh;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,224,150,0.04);
+  }
+}
 
-        /* EXIT MODAL */
-        #exit-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
-        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; text-align: center; border: 1px solid var(--red); width: 100%; max-width: 320px; }
-    </style>
+/* ───── SCREENS ───── */
+.screen {
+  flex: 1; display: flex; flex-direction: column; justify-content: center;
+  padding: 32px 24px;
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 32px));
+}
+
+.screen-title {
+  font-family: var(--mono); font-size: 24px; color: var(--green);
+  text-align: center; margin-bottom: 4px; letter-spacing: 0.06em;
+}
+.screen-sub {
+  font-size: 10px; color: var(--muted); text-align: center;
+  letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 28px;
+}
+
+/* ───── FORM FIELDS ───── */
+.field { position: relative; margin-bottom: 10px; }
+.field input,
+.field select {
+  width: 100%; padding: 13px 16px;
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--border); border-radius: 12px;
+  font-family: var(--font); font-size: 14px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-glow);
+}
+.field .eye {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  cursor: pointer; color: var(--muted); font-size: 16px; user-select: none;
+  transition: color 0.2s; line-height: 1;
+}
+.field .eye:hover { color: var(--green); }
+
+.row-fields { display: flex; gap: 10px; margin-bottom: 10px; }
+.row-fields .field { margin-bottom: 0; }
+.row-fields .field:first-child { flex: 0 0 90px; }
+.row-fields .field:last-child  { flex: 1; }
+
+/* ───── BUTTONS ───── */
+.btn {
+  width: 100%; padding: 14px; margin-top: 6px;
+  border: none; border-radius: 12px; cursor: pointer;
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  letter-spacing: 0.05em; transition: all 0.18s; outline: none;
+}
+.btn-primary { background: var(--green); color: #000; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-outline {
+  background: transparent; color: var(--green);
+  border: 1px solid var(--green); margin-top: 8px;
+}
+.btn-outline:hover { background: var(--green-glow); }
+.btn-ghost  { background: transparent; color: var(--muted); border: none; margin-top: 4px; }
+.btn-ghost:hover  { color: var(--text); }
+
+/* ───── CHAT LAYOUT ───── */
+#chat {
+  flex: 1; display: none; flex-direction: column; overflow: hidden;
+  height: 100%;
+}
+
+/* Header */
+#chat-header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 12px));
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.room-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--green-dim); border: 1.5px solid var(--green);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.room-meta { flex: 1; min-width: 0; }
+.room-name { font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room-status { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 5px; margin-top: 1px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+#btn-exit {
+  padding: 6px 12px; border-radius: 8px;
+  background: rgba(255,48,96,0.12); color: var(--red);
+  border: 1px solid rgba(255,48,96,0.3); font-size: 11px;
+  font-family: var(--font); font-weight: 600; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+#btn-exit:hover { background: rgba(255,48,96,0.22); }
+
+/* Messages */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+#messages::-webkit-scrollbar { width: 4px; }
+#messages::-webkit-scrollbar-track { background: transparent; }
+#messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.msg {
+  max-width: 78%;
+  padding: 9px 13px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+  position: relative;
+  animation: fadeUp 0.2s ease-out;
+}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.msg-mine {
+  align-self: flex-end;
+  background: var(--my);
+  border: 1px solid var(--my-border);
+  border-bottom-right-radius: 4px;
+}
+.msg-other {
+  align-self: flex-start;
+  background: var(--other);
+  border: 1px solid var(--other-border);
+  border-bottom-left-radius: 4px;
+}
+.msg-system {
+  align-self: center;
+  background: transparent;
+  border: none;
+  max-width: 90%;
+  padding: 4px 8px;
+}
+.msg-system .msg-text {
+  font-size: 11px; color: var(--muted); text-align: center;
+  font-style: italic; letter-spacing: 0.04em;
+}
+
+.msg-sender {
+  font-size: 10px; font-weight: 700;
+  color: var(--blue); margin-bottom: 3px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.msg-text { color: var(--text); }
+.msg-meta {
+  display: flex; justify-content: flex-end; align-items: center;
+  gap: 5px; margin-top: 5px;
+}
+.msg-time { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.msg-tick { font-size: 11px; color: var(--green); }
+.msg-locked { color: var(--muted); font-style: italic; font-size: 13px; }
+
+/* Typing indicator */
+#typing-bar {
+  padding: 4px 20px; font-size: 11px; color: var(--muted);
+  font-style: italic; min-height: 20px;
+  flex-shrink: 0;
+}
+.typing-dots span {
+  display: inline-block; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--muted); margin: 0 1px;
+  animation: typing 1.2s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-4px)} }
+
+/* Input area */
+#input-area {
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
+  display: flex; align-items: flex-end; gap: 8px;
+  flex-shrink: 0;
+  position: relative; z-index: 5;
+}
+#emoji-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: var(--elevated); color: var(--muted); font-size: 18px;
+  cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; transition: all 0.2s;
+}
+#emoji-btn:hover { background: var(--border); color: var(--text); }
+#msg-input {
+  flex: 1; background: var(--elevated);
+  border: 1px solid var(--border); border-radius: 22px;
+  color: var(--text); font-family: var(--font); font-size: 14px;
+  padding: 10px 16px; outline: none; resize: none;
+  max-height: 120px; line-height: 1.4;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+#msg-input:focus { border-color: rgba(0,224,150,0.4); }
+#msg-input::placeholder { color: var(--muted); }
+#send-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: var(--green); color: #000; font-size: 16px;
+  cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; transition: all 0.2s;
+}
+#send-btn:hover { filter: brightness(1.1); }
+#send-btn:active { transform: scale(0.92); }
+
+/* Emoji picker */
+#emoji-picker {
+  display: none; position: absolute; bottom: 65px; left: 12px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 10px; z-index: 100;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+#emoji-picker.open { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+#emoji-picker span {
+  font-size: 22px; cursor: pointer; text-align: center;
+  line-height: 1; padding: 3px; border-radius: 6px; transition: background 0.15s;
+}
+#emoji-picker span:hover { background: var(--elevated); }
+
+/* Unread badge */
+#unread-badge {
+  display: none; position: absolute; bottom: 72px; right: 16px;
+  background: var(--green); color: #000; font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,224,150,0.3);
+  animation: bounceIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 20;
+}
+@keyframes bounceIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+
+/* ───── EXIT MODAL ───── */
+#exit-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  justify-content: center; align-items: center;
+  padding: 24px; z-index: 500;
+}
+#exit-overlay.open { display: flex; }
+.modal-box {
+  background: var(--card); border: 1px solid var(--red);
+  border-radius: 20px; padding: 28px 24px; text-align: center;
+  width: 100%; max-width: 300px;
+  animation: fadeUp 0.25s ease-out;
+}
+.modal-box h3 { font-family: var(--mono); font-size: 18px; color: var(--red); margin-bottom: 8px; }
+.modal-box p  { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+
+/* ───── DIVIDERS ───── */
+.divider {
+  display: flex; align-items: center; gap: 10px; margin: 6px 0;
+}
+.divider::before, .divider::after { content:''; flex:1; height:1px; background: var(--border); }
+.divider span { font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+/* ───── ENCRYPTION BADGE ───── */
+.enc-badge {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; font-size: 10px; color: var(--muted);
+  margin-top: 16px; padding: 8px 14px;
+  background: var(--card); border-radius: 8px; border: 1px solid var(--border);
+}
+.enc-badge .lock { color: var(--green); font-size: 12px; }
+</style>
 </head>
 <body>
 
-    <div id="ghost-toast">Pesan Notifikasi</div>
+<div id="toast"></div>
 
-    <div id="loading-screen">
-        <img src="https://raw.githubusercontent.com/fizkers/GHOST-APP/main/logo-Ghost-app.png" class="loader-logo">
-        <div style="font-size: 20px; font-weight: bold; color: var(--green);">GHOST APP</div>
-        <div style="font-size: 11px; margin: 10px 0; color: #8696a0; text-align:center;">End-to-End Encrypted<br>Zero History Messaging</div>
-        <div class="progress-container"><div id="progress-bar"></div></div>
-        <div id="loading-text" style="margin-top:5px; font-size:12px;">0%</div>
+<!-- LOADING -->
+<div id="loading">
+  <img src="https://raw.githubusercontent.com/fizkers/GHOST-APP/main/logo-Ghost-app.png" alt="Ghost">
+  <div class="load-title">GHOST APP</div>
+  <div class="load-sub">End-to-End Encrypted<br>Zero History Protocol</div>
+  <div class="progress-wrap"><div id="progress-bar"></div></div>
+  <div id="load-pct" class="load-pct">0%</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="window">
+
+    <!-- AUTH SCREEN -->
+    <div id="auth-screen" class="screen">
+      <div class="screen-title">👻 GHOST</div>
+      <div class="screen-sub">Encrypted Protocol v2</div>
+
+      <div class="field"><input type="email" id="email" placeholder="Email"></div>
+      <div class="field">
+        <input type="password" id="pass" placeholder="Password">
+        <span class="eye" onclick="toggleEye('pass',this)">👁</span>
+      </div>
+      <div class="field"><input type="text" id="uname" placeholder="Display Name"></div>
+      <div class="field">
+        <select id="country">
+          <option value="🇮🇩 ID">Indonesia 🇮🇩</option>
+          <option value="🇲🇾 MY">Malaysia 🇲🇾</option>
+          <option value="🇺🇸 US">United States 🇺🇸</option>
+          <option value="🇸🇬 SG">Singapore 🇸🇬</option>
+          <option value="🇦🇺 AU">Australia 🇦🇺</option>
+          <option value="🇬🇧 GB">United Kingdom 🇬🇧</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btn-login">LOGIN</button>
+      <button class="btn btn-outline" id="btn-register">DAFTAR BARU</button>
+      <div class="enc-badge"><span class="lock">🔒</span> AES-256 End-to-End Encrypted</div>
     </div>
 
-    <div id="main-container" class="container">
-        <div id="auth-screen" class="screen">
-            <h1 style="color:var(--green); text-align:center; margin-bottom: 5px;">👻 GHOST APP</h1>
-            <p style="text-align:center; font-size: 10px; color: #8696a0; letter-spacing: 2px; margin-bottom: 20px;">ENCRYPTED PROTOCOL</p>
-            <input type="email" id="auth-email" placeholder="Email">
-            <div class="input-group">
-                <input type="password" id="auth-pass" placeholder="Password Akun">
-                <span class="eye-icon" onclick="toggleView('auth-pass')">👁️</span>
-            </div>
-            <input type="text" id="auth-username" placeholder="Display Name">
-            <select id="auth-country">
-                <option value="🇮🇩 ID">Indonesia 🇮🇩</option>
-                <option value="🇲🇾 MY">Malaysia 🇲🇾</option>
-                <option value="🇺🇸 US">United States 🇺🇸</option>
-                <option value="🇸🇬 SG">Singapore 🇸🇬</option>
-            </select>
-            <button id="btnLogin">LOGIN</button>
-            <button id="btnRegister" class="secondary-btn">DAFTAR BARU</button>
-        </div>
+    <!-- ROOM SCREEN -->
+    <div id="room-screen" class="screen" style="display:none;">
+      <div class="screen-title">Setup Room</div>
+      <div class="screen-sub">Pilih kanal & masukkan kunci</div>
 
-        <div id="room-selection" class="screen" style="display:none;">
-            <h2 style="color:var(--green); text-align:center;">Setup Room</h2>
-            <div style="display:flex; gap:10px;">
-                <select id="room-letter" style="flex:1;"></select>
-                <input type="text" id="room-id" placeholder="ID Room" style="flex:2; margin:0;">
-            </div>
-            <div class="input-group">
-                <input type="password" id="room-key" placeholder="Room Key (AES)">
-                <span class="eye-icon" onclick="toggleView('room-key')">👁️</span>
-            </div>
-            <button id="btnJoin">BUKA / GABUNG</button>
-            <button id="btnLogout" class="secondary-btn" style="border:none;">Log Out</button>
-        </div>
-
-        <div id="chat-box">
-            <div id="room-header">
-                <div class="header-info">
-                    <span id="display-room-name"></span>
-                    <div id="status-online"><span class="dot"></span> <span id="member-names">Connecting...</span></div>
-                </div>
-                <button id="btnExitTrigger">EXIT</button>
-            </div>
-
-            <div id="messages"></div>
-
-            <div class="input-area">
-                <input type="text" id="msg-input" placeholder="Ketik pesan rahasia...">
-                <button id="btnSend">➤</button>
-            </div>
-        </div>
+      <div class="row-fields">
+        <div class="field"><select id="room-letter"></select></div>
+        <div class="field"><input type="text" id="room-id" placeholder="ID Room"></div>
+      </div>
+      <div class="field">
+        <input type="password" id="room-key" placeholder="Room Key (enkripsi AES)">
+        <span class="eye" onclick="toggleEye('room-key',this)">👁</span>
+      </div>
+      <button class="btn btn-primary" id="btn-join">BUKA / GABUNG ROOM</button>
+      <div class="divider" style="margin:14px 0;"><span>atau</span></div>
+      <button class="btn btn-ghost" id="btn-logout">Log Out</button>
     </div>
 
-    <div id="exit-modal">
-        <div class="modal-content">
-            <h3>KELUAR?</h3>
-            <p style="font-size:12px; color:#8696a0; margin-bottom:20px;">Data dalam room ini akan dihapus permanen.</p>
-            <button onclick="confirmExit(true)" style="background:var(--red); color:white;">YA, KELUAR</button>
-            <button onclick="confirmExit(false)" class="secondary-btn" style="margin-top:10px;">BATAL</button>
+    <!-- CHAT -->
+    <div id="chat">
+      <div id="chat-header">
+        <div class="room-avatar">👻</div>
+        <div class="room-meta">
+          <div class="room-name" id="room-label">—</div>
+          <div class="room-status"><span class="dot"></span><span id="status-text">Connecting...</span></div>
         </div>
+        <button id="btn-exit">EXIT</button>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="typing-bar"></div>
+
+      <div id="emoji-picker">
+        <span>😀</span><span>😂</span><span>😍</span><span>🥺</span>
+        <span>😭</span><span>😤</span><span>👻</span><span>🔥</span>
+        <span>💀</span><span>✅</span><span>❤️</span><span>💯</span>
+        <span>🤝</span><span>👋</span><span>🤫</span><span>🙏</span>
+      </div>
+
+      <div id="unread-badge" onclick="scrollToBottom(true)">↓ pesan baru</div>
+
+      <div id="input-area">
+        <button id="emoji-btn">😊</button>
+        <textarea id="msg-input" placeholder="Ketik pesan rahasia..." rows="1"></textarea>
+        <button id="send-btn">➤</button>
+      </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-        import { getDatabase, ref, set, push, onValue, remove, get, onDisconnect, off } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+    <!-- EXIT OVERLAY -->
+    <div id="exit-overlay">
+      <div class="modal-box">
+        <h3>KELUAR?</h3>
+        <p>Semua data dalam room ini akan dihapus secara permanen dari server.</p>
+        <button class="btn btn-primary" style="background:var(--red);color:#fff;" onclick="doExit(true)">YA, KELUAR SEKARANG</button>
+        <button class="btn btn-outline" style="margin-top:10px;border-color:var(--muted);color:var(--muted);" onclick="doExit(false)">BATAL</button>
+      </div>
+    </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDzwz_3to3Oq9dNnNtVMp0wqbUmaguVnBA",
-            authDomain: "ghost-app-c0917.firebaseapp.com",
-            databaseURL: "https://ghost-app-c0917-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "ghost-app-c0917",
-            storageBucket: "ghost-app-c0917.firebasestorage.app",
-            messagingSenderId: "953783806880",
-            appId: "1:953783806880:web:3748c997e4c01ab8dc92c5"
-        };
+  </div>
+</div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
-        let myName, currentPath, isHost = false;
+<script type="module">
+import { initializeApp }                              from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword,
+         signInWithEmailAndPassword, signOut }        from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+import { getDatabase, ref, set, push, onValue,
+         remove, get, onDisconnect, off, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-        window.showToast = (msg, isError = false) => {
-            const toast = document.getElementById('ghost-toast');
-            toast.innerText = msg;
-            toast.className = isError ? 'show error' : 'show';
-            setTimeout(() => { toast.classList.remove('show'); }, 3000);
-        };
+const FC = {
+  apiKey: "AIzaSyDzwz_3to3Oq9dNnNtVMp0wqbUmaguVnBA",
+  authDomain: "ghost-app-c0917.firebaseapp.com",
+  databaseURL: "https://ghost-app-c0917-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ghost-app-c0917",
+  storageBucket: "ghost-app-c0917.firebasestorage.app",
+  messagingSenderId: "953783806880",
+  appId: "1:953783806880:web:3748c997e4c01ab8dc92c5"
+};
 
-        window.toggleView = (id) => {
-            const input = document.getElementById(id);
-            input.type = input.type === 'password' ? 'text' : 'password';
-        };
+const app  = initializeApp(FC);
+const auth = getAuth(app);
+const db   = getDatabase(app);
 
-        let prog = 0;
-        const iLoad = setInterval(() => {
-            prog += Math.floor(Math.random() * 20) + 5;
-            if(prog >= 100) {
-                prog = 100; clearInterval(iLoad);
-                setTimeout(() => { 
-                    document.getElementById('loading-screen').style.display='none'; 
-                    document.getElementById('main-container').style.display='flex'; 
-                }, 500);
-            }
-            document.getElementById('progress-bar').style.width = prog + "%";
-            document.getElementById('loading-text').innerText = prog + "%";
-        }, 100);
+let myName = "", currentPath = "", roomKey = "", isHost = false;
+let typingTimer = null, typingRef = null, lastMsgCount = 0, atBottom = true;
 
-        const rL = document.getElementById('room-letter');
-        for(let i=65; i<=90; i++) rL.innerHTML += `<option value="${String.fromCharCode(i)}">${String.fromCharCode(i)}</option>`;
+/* ── helpers ── */
+window.showToast = (msg, err=false) => {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = err ? 'err' : 'ok';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ''; }, 3000);
+};
 
-        document.getElementById('btnRegister').onclick = async () => {
-            const e = document.getElementById('auth-email').value;
-            const p = document.getElementById('auth-pass').value;
-            const u = document.getElementById('auth-username').value;
-            if(!e || !p || !u) return showToast("Lengkapi data!", true);
-            try {
-                await createUserWithEmailAndPassword(auth, e, p);
-                showToast("Berhasil!");
-            } catch(err) { showToast(err.message, true); }
-        };
+window.toggleEye = (id, el) => {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  el.textContent = inp.type === 'password' ? '👁' : '🙈';
+};
 
-        document.getElementById('btnLogin').onclick = async () => {
-            const e = document.getElementById('auth-email').value;
-            const p = document.getElementById('auth-pass').value;
-            myName = document.getElementById('auth-username').value;
-            if(!e || !p || !myName) return showToast("Lengkapi login!", true);
-            try {
-                await signInWithEmailAndPassword(auth, e, p);
-                document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('room-selection').style.display = 'flex';
-                showToast("Halo, " + myName);
-            } catch(err) { showToast("Gagal!", true); }
-        };
+/* loading progress */
+let prog = 0;
+const iLoad = setInterval(() => {
+  prog += Math.floor(Math.random() * 18) + 4;
+  if (prog >= 100) {
+    prog = 100; clearInterval(iLoad);
+    setTimeout(() => {
+      document.getElementById('loading').style.opacity = '0';
+      document.getElementById('loading').style.transition = 'opacity 0.4s';
+      setTimeout(() => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+      }, 400);
+    }, 300);
+  }
+  document.getElementById('progress-bar').style.width = prog + '%';
+  document.getElementById('load-pct').textContent = prog + '%';
+}, 100);
 
-        document.getElementById('btnLogout').onclick = async () => {
-            await signOut(auth);
-            location.reload();
-        };
+/* room letter options */
+const rl = document.getElementById('room-letter');
+for (let i = 65; i <= 90; i++) rl.innerHTML += `<option value="${String.fromCharCode(i)}">${String.fromCharCode(i)}</option>`;
 
-        document.getElementById('btnJoin').onclick = async () => {
-            const l = document.getElementById('room-letter').value;
-            const id = document.getElementById('room-id').value;
-            const key = document.getElementById('room-key').value;
-            if(!id || !key) return showToast("ID & Key wajib!", true);
+/* ── AUTH ── */
+document.getElementById('btn-register').onclick = async () => {
+  const e = document.getElementById('email').value.trim();
+  const p = document.getElementById('pass').value;
+  const u = document.getElementById('uname').value.trim();
+  if (!e || !p || !u) return showToast('Lengkapi semua data!', true);
+  try {
+    await createUserWithEmailAndPassword(auth, e, p);
+    showToast('Akun berhasil dibuat!');
+  } catch (err) { showToast(err.message, true); }
+};
 
-            currentPath = `rooms/${l}_${id}_${key}`;
-            const snap = await get(ref(db, currentPath + "/users"));
-            
-            if(!snap.exists()) {
-                isHost = true;
-                await set(ref(db, currentPath + "/users/" + myName), { role: "host" });
-            } else {
-                if(Object.keys(snap.val()).length >= 2 && !snap.val()[myName]) return showToast("Penuh!", true);
-                isHost = snap.val()[myName]?.role === "host";
-                await set(ref(db, currentPath + "/users/" + myName), { role: isHost ? "host" : "guest" });
-            }
+document.getElementById('btn-login').onclick = async () => {
+  const e = document.getElementById('email').value.trim();
+  const p = document.getElementById('pass').value;
+  myName = document.getElementById('uname').value.trim();
+  if (!e || !p || !myName) return showToast('Lengkapi data login!', true);
+  try {
+    await signInWithEmailAndPassword(auth, e, p);
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('room-screen').style.display = 'flex';
+    showToast('Halo, ' + myName + ' 👋');
+  } catch { showToast('Login gagal. Periksa email/password.', true); }
+};
 
-            onDisconnect(ref(db, currentPath + "/users/" + myName)).remove();
-            document.getElementById('room-selection').style.display = 'none';
-            document.getElementById('chat-box').style.display = 'flex';
-            document.getElementById('display-room-name').innerText = "Room " + l + "-" + id;
+document.getElementById('btn-logout').onclick = async () => {
+  await signOut(auth); location.reload();
+};
 
-            onValue(ref(db, currentPath + "/users"), (s) => {
-                if(s.exists()) {
-                    const users = Object.keys(s.val());
-                    document.getElementById('member-names').innerText = users.join(" & ") + " Online";
-                }
-            });
+/* ── JOIN ROOM ── */
+document.getElementById('btn-join').onclick = async () => {
+  const l   = document.getElementById('room-letter').value;
+  const id  = document.getElementById('room-id').value.trim();
+  const key = document.getElementById('room-key').value;
+  if (!id || !key) return showToast('ID & Key wajib diisi!', true);
 
-            onValue(ref(db, currentPath + "/messages"), (s) => {
-                const box = document.getElementById('messages');
-                box.innerHTML = "";
-                s.forEach((c) => {
-                    const d = c.val();
-                    let dec = "";
-                    try { dec = CryptoJS.AES.decrypt(d.text, key).toString(CryptoJS.enc.Utf8); } catch(e){}
-                    const isMe = d.sender === myName;
-                    box.innerHTML += `<div class="msg ${isMe ? 'my-msg' : 'other-msg'}"><span class="sender-info">${d.sender}</span>${dec || "Locked"}<span class="timestamp">${d.time}</span></div>`;
-                });
-                box.scrollTop = box.scrollHeight;
-            });
-        };
+  roomKey = key;
+  currentPath = `rooms/${l}_${id}_${CryptoJS.SHA256(key).toString().substring(0,8)}`;
 
-        const send = () => {
-            const inp = document.getElementById('msg-input');
-            const key = document.getElementById('room-key').value;
-            if(!inp.value.trim()) return;
-            const enc = CryptoJS.AES.encrypt(inp.value, key).toString();
-            const now = new Date();
-            const time = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-            push(ref(db, currentPath + "/messages"), { sender: myName, text: enc, time: time });
-            inp.value = "";
-        };
+  try {
+    const snap = await get(ref(db, currentPath + '/users'));
+    if (!snap.exists()) {
+      isHost = true;
+      await set(ref(db, currentPath + '/users/' + myName), { role: 'host', joined: Date.now() });
+    } else {
+      const users = snap.val();
+      if (Object.keys(users).length >= 2 && !users[myName])
+        return showToast('Room penuh! Maks 2 user.', true);
+      isHost = users[myName]?.role === 'host';
+      await set(ref(db, currentPath + '/users/' + myName), { role: isHost ? 'host' : 'guest', joined: Date.now() });
+    }
 
-        document.getElementById('btnSend').onclick = send;
-        document.getElementById('msg-input').onkeydown = (e) => { if(e.key === "Enter") send(); };
-        document.getElementById('btnExitTrigger').onclick = () => { document.getElementById('exit-modal').style.display = "flex"; };
-        
-        window.confirmExit = async (yes) => {
-            document.getElementById('exit-modal').style.display = "none";
-            if(yes) {
-                off(ref(db, currentPath + "/messages"));
-                off(ref(db, currentPath + "/users"));
-                if(isHost) await remove(ref(db, currentPath));
-                else await remove(ref(db, currentPath + "/users/" + myName));
-                location.reload();
-            }
-        };
-    </script>
+    onDisconnect(ref(db, currentPath + '/users/' + myName)).remove();
+    typingRef = ref(db, currentPath + '/typing/' + myName);
+    onDisconnect(typingRef).remove();
+
+    document.getElementById('room-screen').style.display = 'none';
+    document.getElementById('chat').style.display = 'flex';
+    document.getElementById('room-label').textContent = 'Room ' + l + '-' + id;
+
+    /* system message: join */
+    pushSystem(myName + ' telah bergabung 🟢');
+
+    /* presence */
+    onValue(ref(db, currentPath + '/users'), s => {
+      if (s.exists()) {
+        const names = Object.keys(s.val());
+        document.getElementById('status-text').textContent = names.join(' & ') + ' online';
+      }
+    });
+
+    /* typing */
+    onValue(ref(db, currentPath + '/typing'), s => {
+      const bar = document.getElementById('typing-bar');
+      if (s.exists()) {
+        const others = Object.keys(s.val()).filter(n => n !== myName);
+        if (others.length) {
+          bar.innerHTML = `<span>${others[0]} mengetik </span><span class="typing-dots"><span></span><span></span><span></span></span>`;
+          return;
+        }
+      }
+      bar.innerHTML = '';
+    });
+
+    /* messages */
+    onValue(ref(db, currentPath + '/messages'), s => {
+      const box  = document.getElementById('messages');
+      const prev = box.scrollTop + box.clientHeight;
+      const wasAtBottom = prev >= box.scrollHeight - 40;
+
+      box.innerHTML = '';
+      let count = 0;
+
+      if (s.exists()) {
+        s.forEach(c => {
+          const d = c.val();
+          count++;
+          if (d.type === 'system') {
+            box.innerHTML += `<div class="msg msg-system"><div class="msg-text">${d.text}</div></div>`;
+            return;
+          }
+          let dec = '';
+          try { dec = CryptoJS.AES.decrypt(d.text, roomKey).toString(CryptoJS.enc.Utf8); } catch {}
+          const isMe = d.sender === myName;
+          box.innerHTML += `
+            <div class="msg ${isMe ? 'msg-mine' : 'msg-other'}">
+              ${!isMe ? `<div class="msg-sender">${d.sender}</div>` : ''}
+              <div class="msg-text">${dec ? escHtml(dec) : '<span class="msg-locked">🔒 Pesan terkunci</span>'}</div>
+              <div class="msg-meta">
+                <span class="msg-time">${d.time || ''}</span>
+                ${isMe ? '<span class="msg-tick">✓✓</span>' : ''}
+              </div>
+            </div>`;
+        });
+      }
+
+      if (wasAtBottom || count <= lastMsgCount) {
+        scrollToBottom(false);
+        hideUnread();
+      } else {
+        const unread = count - lastMsgCount;
+        showUnreadBadge(unread);
+      }
+      lastMsgCount = count;
+    });
+
+  } catch (err) { showToast('Error: ' + err.message, true); }
+};
+
+/* ── SEND ── */
+const doSend = () => {
+  const inp = document.getElementById('msg-input');
+  const txt = inp.value.trim();
+  if (!txt || !currentPath) return;
+  const enc  = CryptoJS.AES.encrypt(txt, roomKey).toString();
+  const now  = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  push(ref(db, currentPath + '/messages'), { sender: myName, text: enc, time });
+  inp.value = ''; autoResize(inp);
+  set(typingRef, null);
+  clearTimeout(typingTimer);
+};
+
+document.getElementById('send-btn').onclick = doSend;
+document.getElementById('msg-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+});
+document.getElementById('msg-input').addEventListener('input', function() {
+  autoResize(this);
+  set(typingRef, true);
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => set(typingRef, null), 2000);
+});
+
+/* ── EMOJI ── */
+document.getElementById('emoji-btn').onclick = () => {
+  document.getElementById('emoji-picker').classList.toggle('open');
+};
+document.querySelectorAll('#emoji-picker span').forEach(s => {
+  s.onclick = () => {
+    document.getElementById('msg-input').value += s.textContent;
+    document.getElementById('emoji-picker').classList.remove('open');
+    document.getElementById('msg-input').focus();
+  };
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('#emoji-picker') && e.target.id !== 'emoji-btn')
+    document.getElementById('emoji-picker').classList.remove('open');
+});
+
+/* ── EXIT ── */
+document.getElementById('btn-exit').onclick = () => {
+  document.getElementById('exit-overlay').classList.add('open');
+};
+
+window.doExit = async yes => {
+  document.getElementById('exit-overlay').classList.remove('open');
+  if (!yes) return;
+  pushSystem(myName + ' telah keluar 🔴').then(async () => {
+    off(ref(db, currentPath + '/messages'));
+    off(ref(db, currentPath + '/users'));
+    off(ref(db, currentPath + '/typing'));
+    if (isHost) await remove(ref(db, currentPath));
+    else {
+      await remove(ref(db, currentPath + '/users/' + myName));
+      await remove(typingRef);
+    }
+    location.reload();
+  });
+};
+
+/* ── SCROLL ── */
+window.scrollToBottom = (smooth=true) => {
+  const box = document.getElementById('messages');
+  box.scrollTo({ top: box.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
+  hideUnread();
+};
+
+document.getElementById('messages').addEventListener('scroll', () => {
+  const box = document.getElementById('messages');
+  atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 60;
+  if (atBottom) hideUnread();
+});
+
+function showUnreadBadge(n) {
+  const b = document.getElementById('unread-badge');
+  b.textContent = `↓ ${n} pesan baru`;
+  b.style.display = 'block';
+}
+function hideUnread() {
+  document.getElementById('unread-badge').style.display = 'none';
+}
+
+/* ── UTILS ── */
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+async function pushSystem(text) {
+  if (!currentPath) return;
+  return push(ref(db, currentPath + '/messages'), { type: 'system', text, time: '' });
+}
+</script>
 </body>
 </html>
